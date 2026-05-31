@@ -1,22 +1,21 @@
-import { SquareIdPServerClient } from "./server.js";
-import type { AccessClaims, SquareIdPConfig, TokenPair, VerifiedPrincipal } from "./types.js";
+import { BaseIdPServerClient } from "./server.js";
+import type { BaseIdPConfig, TokenPair, VerifiedPrincipal } from "./types.js";
 
 export type NextCallbackContext = {
   request: Request;
   tokens: TokenPair;
   principal: VerifiedPrincipal;
-  claims: AccessClaims;
   state?: string;
 };
 
-export type NextSquareAuthOptions = {
+export type NextBaseIdpAuthOptions = {
   defaultReturnTo?: string;
   resolveCodeVerifier?: (request: Request, state?: string) => string | Promise<string | undefined> | undefined;
   onCallback?: (context: NextCallbackContext) => Response | Promise<Response>;
 };
 
-export function createNextSquareAuth(config: SquareIdPConfig, options: NextSquareAuthOptions = {}) {
-  const client = new SquareIdPServerClient(config);
+export function createNextBaseIdpAuth(config: BaseIdPConfig, options: NextBaseIdpAuthOptions = {}) {
+  const client = new BaseIdPServerClient(config);
   return {
     client,
     login(request: Request): Response {
@@ -35,7 +34,7 @@ export function createNextSquareAuth(config: SquareIdPConfig, options: NextSquar
       const codeVerifier = await options.resolveCodeVerifier?.(request, state);
       const tokens = await client.exchangeCode({ code, codeVerifier });
       const principal = await client.verifyAccessToken(tokens.access_token);
-      const context = { request, tokens, principal, claims: principal.claims, state };
+      const context = { request, tokens, principal, state };
       if (options.onCallback) {
         return options.onCallback(context);
       }

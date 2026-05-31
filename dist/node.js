@@ -1,14 +1,10 @@
-import { SquareIdPServerClient } from "./server.js";
-import { idpError, SquareIdPError } from "./errors.js";
-export function squareConfigFromNodeEnv(env = process.env, overrides = {}) {
+import { BaseIdPServerClient } from "./server.js";
+import { idpError, BaseIdPError } from "./errors.js";
+export function baseIdpConfigFromNodeEnv(env = process.env, overrides = {}) {
     return {
+        key: requiredEnv(env, "BASE_IDP_KEY", overrides.key),
         issuer: requiredEnv(env, "BASE_IDP_ISSUER", overrides.issuer),
-        clientId: requiredEnv(env, "BASE_IDP_CLIENT_ID", overrides.clientId),
-        clientSecret: overrides.clientSecret ?? env.BASE_IDP_CLIENT_SECRET,
-        redirectUri: requiredEnv(env, "BASE_IDP_REDIRECT_URI", overrides.redirectUri),
-        scopes: overrides.scopes ?? env.BASE_IDP_SCOPES ?? "openid profile",
-        audience: overrides.audience ?? env.BASE_IDP_AUDIENCE,
-        requiredScope: overrides.requiredScope ?? env.BASE_IDP_REQUIRED_SCOPE,
+        secret: overrides.secret ?? env.BASE_IDP_CLIENT_SECRET ?? env.BASE_IDP_SECRET,
         fetch: overrides.fetch,
     };
 }
@@ -46,8 +42,8 @@ export function bearerTokenFromRequest(request, options = {}) {
         return null;
     return parseCookie(cookieHeader)[options.cookieName] ?? null;
 }
-export function createNodeSquareAuth(configOrClient) {
-    const client = configOrClient instanceof SquareIdPServerClient ? configOrClient : new SquareIdPServerClient(configOrClient);
+export function createNodeBaseIdpAuth(configOrClient) {
+    const client = configOrClient instanceof BaseIdPServerClient ? configOrClient : new BaseIdPServerClient(configOrClient);
     return {
         client,
         async verifyRequest(request, options = {}) {
@@ -57,8 +53,8 @@ export function createNodeSquareAuth(configOrClient) {
             }
             const principal = await client.verifyAccessToken(token, options);
             if (options.attach !== false) {
-                request.squarePrincipal = principal;
-                request.squareClaims = principal.claims;
+                request.baseIdpPrincipal = principal;
+                request.baseIdpClaims = principal.claims;
                 if (options.attachUser)
                     request.user = principal;
             }
@@ -82,7 +78,7 @@ export function createNodeSquareAuth(configOrClient) {
     };
 }
 export function createExpressMiddleware(configOrClient, options = {}) {
-    const auth = createNodeSquareAuth(configOrClient);
+    const auth = createNodeBaseIdpAuth(configOrClient);
     return async (request, response, next) => {
         try {
             await auth.verifyRequest(request, options);
@@ -97,9 +93,9 @@ export function createExpressMiddleware(configOrClient, options = {}) {
         }
     };
 }
-export function createNestSquareGuard(configOrClient, options = {}) {
-    const auth = createNodeSquareAuth(configOrClient);
-    return class SquareIdPNestGuard {
+export function createNestBaseIdpGuard(configOrClient, options = {}) {
+    const auth = createNodeBaseIdpAuth(configOrClient);
+    return class BaseIdPNestGuard {
         async canActivate(context) {
             const request = context.switchToHttp().getRequest();
             await auth.verifyRequest(request, options);
@@ -108,7 +104,7 @@ export function createNestSquareGuard(configOrClient, options = {}) {
     };
 }
 function writeAuthError(response, error) {
-    const code = error instanceof SquareIdPError ? error.code : "unauthorized";
+    const code = error instanceof BaseIdPError ? error.code : "unauthorized";
     const statusCode = code === "insufficient_scope" ? 403 : 401;
     const body = { error: code, error_description: error instanceof Error ? error.message : "unauthorized" };
     response.setHeader("WWW-Authenticate", `Bearer error="${code}"`);
@@ -139,9 +135,8 @@ function parseCookie(header) {
 }
 function requiredEnv(env, name, override) {
     const value = override ?? env[name];
-    if (!value) {
+    if (!value)
         throw new Error(`${name} is required`);
-    }
     return value;
 }
 function canonicalHeaderName(name) {

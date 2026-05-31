@@ -1,6 +1,6 @@
-import { SquareIdPServerClient } from "./server.js";
-export function createNextSquareAuth(config, options = {}) {
-    const client = new SquareIdPServerClient(config);
+import { BaseIdPServerClient } from "./server.js";
+export function createNextBaseIdpAuth(config, options = {}) {
+    const client = new BaseIdPServerClient(config);
     return {
         client,
         login(request) {
@@ -19,7 +19,7 @@ export function createNextSquareAuth(config, options = {}) {
             const codeVerifier = await options.resolveCodeVerifier?.(request, state);
             const tokens = await client.exchangeCode({ code, codeVerifier });
             const principal = await client.verifyAccessToken(tokens.access_token);
-            const context = { request, tokens, principal, claims: principal.claims, state };
+            const context = { request, tokens, principal, state };
             if (options.onCallback) {
                 return options.onCallback(context);
             }

@@ -1,6 +1,6 @@
-import { SquareIdPServerClient } from "./server.js";
-import { idpError, SquareIdPError } from "./errors.js";
-import type { SquareIdPConfig, VerifiedPrincipal, VerifyAccessTokenOptions } from "./types.js";
+import { BaseIdPServerClient } from "./server.js";
+import { idpError, BaseIdPError } from "./errors.js";
+import type { BaseIdPConfig, VerifiedPrincipal, VerifyAccessTokenOptions } from "./types.js";
 
 export type HeaderBag =
   | Headers
@@ -17,8 +17,8 @@ export type NodeRequestLike = {
   headers: HeaderBag;
   cookies?: Record<string, string | undefined>;
   user?: unknown;
-  squarePrincipal?: VerifiedPrincipal;
-  squareClaims?: VerifiedPrincipal["claims"];
+  baseIdpPrincipal?: VerifiedPrincipal;
+  baseIdpClaims?: VerifiedPrincipal["claims"];
 };
 
 export type NodeResponseLike = {
@@ -48,38 +48,32 @@ export type NestExecutionContextLike = {
 
 export type NodeEnvLike = Record<string, string | undefined>;
 
-export type NodeSquareAuthOptions = VerifyAccessTokenOptions & {
+export type NodeBaseIdpAuthOptions = VerifyAccessTokenOptions & {
   attach?: boolean;
   attachUser?: boolean;
   cookieName?: string;
   errorBody?: boolean;
 };
 
-export type NodeSquareAuth = ReturnType<typeof createNodeSquareAuth>;
+export type NodeBaseIdpAuth = ReturnType<typeof createNodeBaseIdpAuth>;
 
-export function squareConfigFromNodeEnv(
+export function baseIdpConfigFromNodeEnv(
   env: NodeEnvLike = process.env,
-  overrides: Partial<SquareIdPConfig> = {},
-): SquareIdPConfig {
+  overrides: Partial<BaseIdPConfig> = {},
+): BaseIdPConfig {
   return {
+    key: requiredEnv(env, "BASE_IDP_KEY", overrides.key),
     issuer: requiredEnv(env, "BASE_IDP_ISSUER", overrides.issuer),
-    clientId: requiredEnv(env, "BASE_IDP_CLIENT_ID", overrides.clientId),
-    clientSecret: overrides.clientSecret ?? env.BASE_IDP_CLIENT_SECRET,
-    redirectUri: requiredEnv(env, "BASE_IDP_REDIRECT_URI", overrides.redirectUri),
-    scopes: overrides.scopes ?? env.BASE_IDP_SCOPES ?? "openid profile",
-    audience: overrides.audience ?? env.BASE_IDP_AUDIENCE,
-    requiredScope: overrides.requiredScope ?? env.BASE_IDP_REQUIRED_SCOPE,
+    secret: overrides.secret ?? env.BASE_IDP_CLIENT_SECRET ?? env.BASE_IDP_SECRET,
     fetch: overrides.fetch,
   };
 }
 
 export function readHeader(headers: HeaderBag | undefined, name: string): string | null {
   if (!headers) return null;
-
   const getter = typeof headers.get === "function" ? headers.get.bind(headers) : undefined;
   const fromGetter = getter?.(name) ?? getter?.(name.toLowerCase()) ?? getter?.(name.toUpperCase());
   if (fromGetter) return fromGetter;
-
   const record = headers as Record<string, string | string[] | undefined>;
   const raw = record[name] ?? record[name.toLowerCase()] ?? record[canonicalHeaderName(name)];
   if (Array.isArray(raw)) return raw[0] ?? null;
@@ -93,39 +87,36 @@ export function bearerTokenFromHeaders(headers: HeaderBag): string | null {
   return match?.[1]?.trim() || null;
 }
 
-export function bearerTokenFromRequest(request: NodeRequestLike, options: Pick<NodeSquareAuthOptions, "cookieName"> = {}): string | null {
+export function bearerTokenFromRequest(request: NodeRequestLike, options: Pick<NodeBaseIdpAuthOptions, "cookieName"> = {}): string | null {
   const headerToken = bearerTokenFromHeaders(request.headers);
   if (headerToken) return headerToken;
-
   if (!options.cookieName) return null;
   const directCookie = request.cookies?.[options.cookieName];
   if (directCookie) return directCookie;
-
   const cookieHeader = readHeader(request.headers, "cookie");
   if (!cookieHeader) return null;
   return parseCookie(cookieHeader)[options.cookieName] ?? null;
 }
 
-export function createNodeSquareAuth(configOrClient: SquareIdPConfig | SquareIdPServerClient) {
-  const client = configOrClient instanceof SquareIdPServerClient ? configOrClient : new SquareIdPServerClient(configOrClient);
+export function createNodeBaseIdpAuth(configOrClient: BaseIdPConfig | BaseIdPServerClient) {
+  const client = configOrClient instanceof BaseIdPServerClient ? configOrClient : new BaseIdPServerClient(configOrClient);
 
   return {
     client,
-    async verifyRequest(request: NodeRequestLike, options: NodeSquareAuthOptions = {}): Promise<VerifiedPrincipal> {
+    async verifyRequest(request: NodeRequestLike, options: NodeBaseIdpAuthOptions = {}): Promise<VerifiedPrincipal> {
       const token = bearerTokenFromRequest(request, options);
       if (!token) {
         throw idpError("missing_bearer_token", "missing bearer token");
       }
-
       const principal = await client.verifyAccessToken(token, options);
       if (options.attach !== false) {
-        request.squarePrincipal = principal;
-        request.squareClaims = principal.claims;
+        request.baseIdpPrincipal = principal;
+        request.baseIdpClaims = principal.claims;
         if (options.attachUser) request.user = principal;
       }
       return principal;
     },
-    requireAuth(options: NodeSquareAuthOptions = {}) {
+    requireAuth(options: NodeBaseIdpAuthOptions = {}) {
       return async (request: NodeRequestLike, response: NodeResponseLike, next: NodeNext) => {
         try {
           await this.verifyRequest(request, options);
@@ -142,8 +133,8 @@ export function createNodeSquareAuth(configOrClient: SquareIdPConfig | SquareIdP
   };
 }
 
-export function createExpressMiddleware(configOrClient: SquareIdPConfig | SquareIdPServerClient, options: NodeSquareAuthOptions = {}) {
-  const auth = createNodeSquareAuth(configOrClient);
+export function createExpressMiddleware(configOrClient: BaseIdPConfig | BaseIdPServerClient, options: NodeBaseIdpAuthOptions = {}) {
+  const auth = createNodeBaseIdpAuth(configOrClient);
   return async (request: ExpressRequestLike, response: ExpressResponseLike, next: ExpressNext) => {
     try {
       await auth.verifyRequest(request, options);
@@ -158,9 +149,9 @@ export function createExpressMiddleware(configOrClient: SquareIdPConfig | Square
   };
 }
 
-export function createNestSquareGuard(configOrClient: SquareIdPConfig | SquareIdPServerClient, options: NodeSquareAuthOptions = {}) {
-  const auth = createNodeSquareAuth(configOrClient);
-  return class SquareIdPNestGuard {
+export function createNestBaseIdpGuard(configOrClient: BaseIdPConfig | BaseIdPServerClient, options: NodeBaseIdpAuthOptions = {}) {
+  const auth = createNodeBaseIdpAuth(configOrClient);
+  return class BaseIdPNestGuard {
     async canActivate(context: NestExecutionContextLike): Promise<boolean> {
       const request = context.switchToHttp().getRequest<NodeRequestLike>();
       await auth.verifyRequest(request, options);
@@ -170,13 +161,11 @@ export function createNestSquareGuard(configOrClient: SquareIdPConfig | SquareId
 }
 
 function writeAuthError(response: NodeResponseLike | ExpressResponseLike, error: unknown): void {
-  const code = error instanceof SquareIdPError ? error.code : "unauthorized";
+  const code = error instanceof BaseIdPError ? error.code : "unauthorized";
   const statusCode = code === "insufficient_scope" ? 403 : 401;
   const body = { error: code, error_description: error instanceof Error ? error.message : "unauthorized" };
-
   response.setHeader("WWW-Authenticate", `Bearer error="${code}"`);
   response.setHeader("Content-Type", "application/json");
-
   const maybeExpress = response as ExpressResponseLike;
   const status = maybeExpress.status;
   const json = maybeExpress.json;
@@ -185,7 +174,6 @@ function writeAuthError(response: NodeResponseLike | ExpressResponseLike, error:
     json.call(maybeExpress, body);
     return;
   }
-
   response.statusCode = statusCode;
   response.end(JSON.stringify(body));
 }
@@ -204,9 +192,7 @@ function parseCookie(header: string): Record<string, string> {
 
 function requiredEnv(env: NodeEnvLike, name: string, override?: string): string {
   const value = override ?? env[name];
-  if (!value) {
-    throw new Error(`${name} is required`);
-  }
+  if (!value) throw new Error(`${name} is required`);
   return value;
 }
 

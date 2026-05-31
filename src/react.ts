@@ -1,7 +1,7 @@
-import { SquareIdPClient } from "./client.js";
-import type { AuthorizeUrlOptions, SquareIdPConfig } from "./types.js";
+import { BaseIdPClient } from "./client.js";
+import type { AuthorizeUrlOptions, BaseIdPConfig } from "./types.js";
 
-export type ReactSquareAuth = {
+export type ReactBaseIdpAuth = {
   loginHref(options?: AuthorizeUrlOptions): string;
   login(options?: AuthorizeUrlOptions): void;
   buttonProps(options?: AuthorizeUrlOptions): {
@@ -10,8 +10,8 @@ export type ReactSquareAuth = {
   };
 };
 
-export function createReactSquareAuth(config: SquareIdPConfig | SquareIdPClient): ReactSquareAuth {
-  const client = config instanceof SquareIdPClient ? config : new SquareIdPClient(config);
+export function createReactBaseIdpAuth(config: BaseIdPConfig | BaseIdPClient): ReactBaseIdpAuth {
+  const client = config instanceof BaseIdPClient ? config : new BaseIdPClient(config);
   return {
     loginHref(options = {}) {
       return client.authorizeUrl(options);

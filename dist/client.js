@@ -1,61 +1,95 @@
 import { idpError } from "./errors.js";
-export class SquareIdPClient {
+export class BaseIdPClient {
+    rawConfig;
     cfg;
     metadataCache;
     keyCache;
-    constructor(config) {
-        if (!config.issuer || !config.clientId || !config.redirectUri) {
-            throw idpError("invalid_config", "issuer, clientId, and redirectUri are required");
+    constructor(rawConfig) {
+        this.rawConfig = rawConfig;
+        if (!rawConfig.key) {
+            throw idpError("invalid_config", "base key is required (set BASE_IDP_KEY)");
         }
-        const fetcher = config.fetch ?? globalThis.fetch;
+        if (!rawConfig.issuer) {
+            throw idpError("invalid_config", "issuer is required (set BASE_IDP_ISSUER)");
+        }
+        const fetcher = rawConfig.fetch ?? globalThis.fetch;
         if (!fetcher) {
             throw idpError("invalid_config", "fetch is required in this runtime");
         }
         this.cfg = {
-            issuer: trimSlash(config.issuer),
-            clientId: config.clientId,
-            redirectUri: config.redirectUri,
-            scopes: config.scopes,
-            audience: config.audience ?? "square-experience",
+            issuer: trimSlash(rawConfig.issuer),
+            key: rawConfig.key,
+            clientId: "",
+            redirectUri: "",
+            scopes: [],
+            audience: "square-experience",
             fetch: fetcher,
-            clientSecret: config.clientSecret,
-            requiredScope: config.requiredScope,
+            clientSecret: rawConfig.secret ?? "",
+            confidential: false,
+            allowedScopes: [],
+            allowedAuthMethods: [],
+            requiredScope: "",
         };
     }
     get issuer() {
         return this.cfg.issuer;
     }
+    get clientId() {
+        return this.cfg.clientId;
+    }
     scopes(value = this.cfg.scopes) {
         return Array.isArray(value) ? value.filter(Boolean) : value.split(/\s+/).filter(Boolean);
     }
-    async discovery(force = false) {
-        if (this.metadataCache && !force) {
-            return this.metadataCache;
+    async resolveConfig() {
+        if (this.cfg.clientId)
+            return this.cfg;
+        const response = await this.cfg.fetch(`${this.cfg.issuer}/v1/client-config?key=${encodeURIComponent(this.cfg.key)}`, { headers: { Accept: "application/json" } });
+        const payload = (await response.json().catch(() => ({})));
+        if (!response.ok) {
+            throw idpError("config_discovery_failed", "base idp: config discovery failed", response.status, payload);
         }
+        this.cfg.issuer = trimSlash(payload.issuer);
+        this.cfg.clientId = payload.client_id;
+        this.cfg.confidential = payload.confidential;
+        this.cfg.allowedScopes = payload.allowed_scopes;
+        this.cfg.allowedAuthMethods = payload.allowed_auth_methods;
+        if (!this.cfg.redirectUri && payload.allowed_redirect_uris.length > 0) {
+            this.cfg.redirectUri = payload.allowed_redirect_uris[0];
+        }
+        if (this.cfg.scopes.length === 0 && payload.allowed_scopes.length > 0) {
+            this.cfg.scopes = payload.allowed_scopes;
+        }
+        return this.cfg;
+    }
+    async discovery(force = false) {
+        if (this.metadataCache && !force)
+            return this.metadataCache;
         const response = await this.cfg.fetch(`${this.cfg.issuer}/.well-known/square-identity`, {
             headers: { Accept: "application/json" },
         });
         if (!response.ok) {
-            throw idpError("discovery_failed", "Base discovery endpoint rejected the request", response.status);
+            throw idpError("discovery_failed", "idp discovery endpoint rejected the request", response.status);
         }
         this.metadataCache = (await response.json());
         return this.metadataCache;
     }
     async publicKeys(force = false) {
-        if (this.keyCache && !force) {
+        if (this.keyCache && !force)
             return this.keyCache;
-        }
         const metadata = await this.discovery();
         const response = await this.cfg.fetch(metadata.paseto_public_key_endpoint, {
             headers: { Accept: "application/json" },
         });
         if (!response.ok) {
-            throw idpError("key_fetch_failed", "Base public-key endpoint rejected the request", response.status);
+            throw idpError("key_fetch_failed", "idp public-key endpoint rejected the request", response.status);
         }
         this.keyCache = (await response.json());
         return this.keyCache;
     }
     authorizeUrl(options = {}) {
+        if (!this.cfg.clientId) {
+            throw idpError("not_initialized", "client is not initialized; call resolveConfig() or await auto-init");
+        }
         const url = new URL(`${this.cfg.issuer}/oauth2/authorize`);
         url.searchParams.set("response_type", options.responseType ?? "code");
         url.searchParams.set("client_id", this.cfg.clientId);
@@ -65,9 +99,15 @@ export class SquareIdPClient {
             url.searchParams.set("state", options.state);
         if (options.nonce)
             url.searchParams.set("nonce", options.nonce);
+        if (options.authSessionId)
+            url.searchParams.set("auth_session_id", options.authSessionId);
         if (options.codeChallenge) {
             url.searchParams.set("code_challenge", options.codeChallenge);
             url.searchParams.set("code_challenge_method", options.codeChallengeMethod ?? "S256");
+        }
+        for (const [key, value] of Object.entries(options.additionalParameters ?? {})) {
+            if (key && value)
+                url.searchParams.set(key, value);
         }
         return url.toString();
     }
@@ -75,6 +115,7 @@ export class SquareIdPClient {
         if (!options.code) {
             throw idpError("invalid_request", "authorization code is required");
         }
+        await this.resolveConfig();
         const metadata = await this.discovery();
         const body = new URLSearchParams({
             grant_type: "authorization_code",
@@ -92,6 +133,7 @@ export class SquareIdPClient {
         if (!options.refreshToken) {
             throw idpError("invalid_request", "refresh token is required");
         }
+        await this.resolveConfig();
         const metadata = await this.discovery();
         const body = new URLSearchParams({
             grant_type: "refresh_token",
@@ -115,11 +157,12 @@ export class SquareIdPClient {
         });
         const payload = await response.json().catch(() => undefined);
         if (!response.ok) {
-            throw idpError("token_exchange_failed", "Base token endpoint rejected the request", response.status, payload);
+            throw idpError("token_exchange_failed", "idp token endpoint rejected the request", response.status, payload);
         }
         return payload;
     }
 }
+export { BaseIdPClient as BaseIdpClient };
 function trimSlash(value) {
     return value.replace(/\/+$/, "");
 }

@@ -1,4 +1,4 @@
-export declare class SquareIdPError extends Error {
+export declare class BaseIdPError extends Error {
     readonly code: string;
     readonly status?: number;
     readonly details?: unknown;
@@ -7,5 +7,6 @@ export declare class SquareIdPError extends Error {
         details?: unknown;
     });
 }
-export declare function idpError(code: string, message: string, status?: number, details?: unknown): SquareIdPError;
+export declare function idpError(code: string, message: string, status?: number, details?: unknown): BaseIdPError;
+export { BaseIdPError as BaseIdpError };
 //# sourceMappingURL=errors.d.ts.map

@@ -1,6 +1,6 @@
-import type { ReactSquareAuth } from "./react.js";
-import type { SquareIdPConfig } from "./types.js";
-export type ViteSquareEnv = Record<string, string | boolean | undefined>;
-export declare function squareConfigFromViteEnv(env: ViteSquareEnv, overrides?: Partial<SquareIdPConfig>): SquareIdPConfig;
-export declare function createViteSquareAuth(env: ViteSquareEnv, overrides?: Partial<SquareIdPConfig>): ReactSquareAuth;
+import type { ReactBaseIdpAuth } from "./react.js";
+import type { BaseIdPConfig } from "./types.js";
+export type ViteBaseIdpEnv = Record<string, string | boolean | undefined>;
+export declare function baseIdpConfigFromViteEnv(env: ViteBaseIdpEnv, overrides?: Partial<BaseIdPConfig>): BaseIdPConfig;
+export declare function createViteBaseIdpAuth(env: ViteBaseIdpEnv, overrides?: Partial<BaseIdPConfig>): ReactBaseIdpAuth;
 //# sourceMappingURL=vite.d.ts.map

@@ -1,5 +1,5 @@
-import { SquareIdPServerClient } from "./server.js";
-import type { SquareIdPConfig, VerifiedPrincipal, VerifyAccessTokenOptions } from "./types.js";
+import { BaseIdPServerClient } from "./server.js";
+import type { BaseIdPConfig, VerifiedPrincipal, VerifyAccessTokenOptions } from "./types.js";
 export type HeaderBag = Headers | {
     get?(name: string): string | null | undefined;
     authorization?: string | string[];
@@ -12,8 +12,8 @@ export type NodeRequestLike = {
     headers: HeaderBag;
     cookies?: Record<string, string | undefined>;
     user?: unknown;
-    squarePrincipal?: VerifiedPrincipal;
-    squareClaims?: VerifiedPrincipal["claims"];
+    baseIdpPrincipal?: VerifiedPrincipal;
+    baseIdpClaims?: VerifiedPrincipal["claims"];
 };
 export type NodeResponseLike = {
     statusCode: number;
@@ -35,24 +35,24 @@ export type NestExecutionContextLike = {
     };
 };
 export type NodeEnvLike = Record<string, string | undefined>;
-export type NodeSquareAuthOptions = VerifyAccessTokenOptions & {
+export type NodeBaseIdpAuthOptions = VerifyAccessTokenOptions & {
     attach?: boolean;
     attachUser?: boolean;
     cookieName?: string;
     errorBody?: boolean;
 };
-export type NodeSquareAuth = ReturnType<typeof createNodeSquareAuth>;
-export declare function squareConfigFromNodeEnv(env?: NodeEnvLike, overrides?: Partial<SquareIdPConfig>): SquareIdPConfig;
+export type NodeBaseIdpAuth = ReturnType<typeof createNodeBaseIdpAuth>;
+export declare function baseIdpConfigFromNodeEnv(env?: NodeEnvLike, overrides?: Partial<BaseIdPConfig>): BaseIdPConfig;
 export declare function readHeader(headers: HeaderBag | undefined, name: string): string | null;
 export declare function bearerTokenFromHeaders(headers: HeaderBag): string | null;
-export declare function bearerTokenFromRequest(request: NodeRequestLike, options?: Pick<NodeSquareAuthOptions, "cookieName">): string | null;
-export declare function createNodeSquareAuth(configOrClient: SquareIdPConfig | SquareIdPServerClient): {
-    client: SquareIdPServerClient;
-    verifyRequest(request: NodeRequestLike, options?: NodeSquareAuthOptions): Promise<VerifiedPrincipal>;
-    requireAuth(options?: NodeSquareAuthOptions): (request: NodeRequestLike, response: NodeResponseLike, next: NodeNext) => Promise<void>;
+export declare function bearerTokenFromRequest(request: NodeRequestLike, options?: Pick<NodeBaseIdpAuthOptions, "cookieName">): string | null;
+export declare function createNodeBaseIdpAuth(configOrClient: BaseIdPConfig | BaseIdPServerClient): {
+    client: BaseIdPServerClient;
+    verifyRequest(request: NodeRequestLike, options?: NodeBaseIdpAuthOptions): Promise<VerifiedPrincipal>;
+    requireAuth(options?: NodeBaseIdpAuthOptions): (request: NodeRequestLike, response: NodeResponseLike, next: NodeNext) => Promise<void>;
 };
-export declare function createExpressMiddleware(configOrClient: SquareIdPConfig | SquareIdPServerClient, options?: NodeSquareAuthOptions): (request: ExpressRequestLike, response: ExpressResponseLike, next: ExpressNext) => Promise<void>;
-export declare function createNestSquareGuard(configOrClient: SquareIdPConfig | SquareIdPServerClient, options?: NodeSquareAuthOptions): {
+export declare function createExpressMiddleware(configOrClient: BaseIdPConfig | BaseIdPServerClient, options?: NodeBaseIdpAuthOptions): (request: ExpressRequestLike, response: ExpressResponseLike, next: ExpressNext) => Promise<void>;
+export declare function createNestBaseIdpGuard(configOrClient: BaseIdPConfig | BaseIdPServerClient, options?: NodeBaseIdpAuthOptions): {
     new (): {
         canActivate(context: NestExecutionContextLike): Promise<boolean>;
     };

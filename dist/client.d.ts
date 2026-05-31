@@ -1,16 +1,20 @@
-import type { AuthorizeUrlOptions, RefreshOptions, SquareIdPConfig, SquareIdentityMetadata, SquarePublicKeySet, TokenExchangeOptions, TokenPair } from "./types.js";
-export declare class SquareIdPClient {
-    protected readonly cfg: Required<Omit<SquareIdPConfig, "clientSecret" | "requiredScope">> & Pick<SquareIdPConfig, "clientSecret" | "requiredScope">;
+import type { AuthorizeUrlOptions, BaseIdPConfig, BaseIdpIdentityMetadata, RefreshOptions, ResolvedConfig, BaseIdpPublicKeySet, TokenExchangeOptions, TokenPair } from "./types.js";
+export declare class BaseIdPClient {
+    private readonly rawConfig;
+    protected readonly cfg: Required<ResolvedConfig>;
     private metadataCache?;
     private keyCache?;
-    constructor(config: SquareIdPConfig);
+    constructor(rawConfig: BaseIdPConfig);
     get issuer(): string;
+    get clientId(): string;
     scopes(value?: string | string[]): string[];
-    discovery(force?: boolean): Promise<SquareIdentityMetadata>;
-    publicKeys(force?: boolean): Promise<SquarePublicKeySet>;
+    resolveConfig(): Promise<ResolvedConfig>;
+    discovery(force?: boolean): Promise<BaseIdpIdentityMetadata>;
+    publicKeys(force?: boolean): Promise<BaseIdpPublicKeySet>;
     authorizeUrl(options?: AuthorizeUrlOptions): string;
     exchangeCode(options: TokenExchangeOptions): Promise<TokenPair>;
     refresh(options: RefreshOptions): Promise<TokenPair>;
     private postToken;
 }
+export { BaseIdPClient as BaseIdpClient };
 //# sourceMappingURL=client.d.ts.map

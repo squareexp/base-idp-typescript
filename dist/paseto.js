@@ -26,7 +26,7 @@ export function verifyPasetoV4Public(token, keySet, config, options = {}) {
     }
     const footer = JSON.parse(utf8Decode(footerBytes));
     if (footer.alg !== "v4.public" || footer.typ !== "paseto" || !footer.kid) {
-        throw idpError("invalid_token", "PASETO footer is not a Square v4.public footer");
+        throw idpError("invalid_token", "PASETO footer is not a BaseIdP v4.public footer");
     }
     const publicKey = keySet.keys.find((key) => key.kid === footer.kid && key.alg === "v4.public");
     if (!publicKey) {

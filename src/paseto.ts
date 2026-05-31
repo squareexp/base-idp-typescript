@@ -1,7 +1,7 @@
 import { createPublicKey, verify as verifySignature } from "node:crypto";
 import { base64UrlDecode, concatBytes, utf8Decode, utf8Encode } from "./base64url.js";
 import { idpError } from "./errors.js";
-import type { AccessClaims, SquareIdPConfig, SquarePublicKeySet, VerifiedPrincipal, VerifyAccessTokenOptions } from "./types.js";
+import type { AccessClaims, ResolvedConfig, BaseIdpPublicKeySet, VerifiedPrincipal, VerifyAccessTokenOptions } from "./types.js";
 
 const HEADER = utf8Encode("v4.public.");
 const IMPLICIT_ASSERTION = utf8Encode("square-experience:idp:access:v1");
@@ -27,8 +27,8 @@ export function unsafeFooterKid(token: string): string | undefined {
 
 export function verifyPasetoV4Public(
   token: string,
-  keySet: SquarePublicKeySet,
-  config: Pick<SquareIdPConfig, "issuer" | "audience" | "requiredScope">,
+  keySet: BaseIdpPublicKeySet,
+  config: { issuer: string; audience?: string; requiredScope?: string },
   options: VerifyAccessTokenOptions = {},
 ): VerifiedPrincipal {
   const parts = token.split(".");
@@ -44,7 +44,7 @@ export function verifyPasetoV4Public(
 
   const footer = JSON.parse(utf8Decode(footerBytes)) as Footer;
   if (footer.alg !== "v4.public" || footer.typ !== "paseto" || !footer.kid) {
-    throw idpError("invalid_token", "PASETO footer is not a Square v4.public footer");
+    throw idpError("invalid_token", "PASETO footer is not a BaseIdP v4.public footer");
   }
 
   const publicKey = keySet.keys.find((key) => key.kid === footer.kid && key.alg === "v4.public");

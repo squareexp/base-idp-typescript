@@ -1,6 +1,6 @@
-import { SquareIdPClient } from "./client.js";
-export function createReactSquareAuth(config) {
-    const client = config instanceof SquareIdPClient ? config : new SquareIdPClient(config);
+import { BaseIdPClient } from "./client.js";
+export function createReactBaseIdpAuth(config) {
+    const client = config instanceof BaseIdPClient ? config : new BaseIdPClient(config);
     return {
         loginHref(options = {}) {
             return client.authorizeUrl(options);

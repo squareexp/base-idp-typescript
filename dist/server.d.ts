@@ -1,10 +1,13 @@
-import { SquareIdPClient } from "./client.js";
-import type { SquareIdPConfig, VerifiedPrincipal, VerifyAccessTokenOptions } from "./types.js";
-export declare class SquareIdPServerClient extends SquareIdPClient {
+import { BaseIdPClient } from "./client.js";
+import type { BaseIdPConfig, ResolvedConfig, VerifiedPrincipal, VerifyAccessTokenOptions } from "./types.js";
+export declare class BaseIdPServerClient extends BaseIdPClient {
     private readonly serverConfig;
-    constructor(serverConfig: SquareIdPConfig);
+    private initialized;
+    constructor(serverConfig: BaseIdPConfig);
+    init(): Promise<ResolvedConfig>;
     verifyAccessToken(token: string, options?: VerifyAccessTokenOptions): Promise<VerifiedPrincipal>;
 }
+export { BaseIdPServerClient as BaseIdpServerClient };
 export { verifyPasetoV4Public, unsafeFooter, unsafeFooterKid } from "./paseto.js";
 export type { VerifiedPrincipal, VerifyAccessTokenOptions, AccessClaims } from "./types.js";
 //# sourceMappingURL=server.d.ts.map

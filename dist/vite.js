@@ -1,24 +1,20 @@
-import { SquareIdPClient } from "./client.js";
-import { createReactSquareAuth } from "./react.js";
-export function squareConfigFromViteEnv(env, overrides = {}) {
+import { BaseIdPClient } from "./client.js";
+import { createReactBaseIdpAuth } from "./react.js";
+export function baseIdpConfigFromViteEnv(env, overrides = {}) {
     return {
+        key: stringEnv(env, "VITE_BASE_IDP_KEY", "BASE_IDP_KEY", overrides.key),
         issuer: stringEnv(env, "VITE_BASE_IDP_ISSUER", "BASE_IDP_ISSUER", overrides.issuer),
-        clientId: stringEnv(env, "VITE_BASE_IDP_CLIENT_ID", "BASE_IDP_CLIENT_ID", overrides.clientId),
-        redirectUri: stringEnv(env, "VITE_BASE_IDP_REDIRECT_URI", "BASE_IDP_REDIRECT_URI", overrides.redirectUri),
-        scopes: overrides.scopes ?? stringEnv(env, "VITE_BASE_IDP_SCOPES", "BASE_IDP_SCOPES", "openid profile"),
-        audience: overrides.audience ?? optionalStringEnv(env, "VITE_BASE_IDP_AUDIENCE", "BASE_IDP_AUDIENCE"),
-        requiredScope: overrides.requiredScope ?? optionalStringEnv(env, "VITE_BASE_IDP_REQUIRED_SCOPE", "BASE_IDP_REQUIRED_SCOPE"),
+        secret: overrides.secret ?? optionalStringEnv(env, "VITE_BASE_IDP_SECRET", "BASE_IDP_SECRET"),
         fetch: overrides.fetch,
     };
 }
-export function createViteSquareAuth(env, overrides = {}) {
-    return createReactSquareAuth(new SquareIdPClient(squareConfigFromViteEnv(env, overrides)));
+export function createViteBaseIdpAuth(env, overrides = {}) {
+    return createReactBaseIdpAuth(new BaseIdPClient(baseIdpConfigFromViteEnv(env, overrides)));
 }
 function stringEnv(env, publicKey, fallbackKey, fallback) {
     const value = optionalStringEnv(env, publicKey, fallbackKey) ?? fallback;
-    if (!value) {
+    if (!value)
         throw new Error(`Missing ${publicKey}`);
-    }
     return value;
 }
 function optionalStringEnv(env, publicKey, fallbackKey) {

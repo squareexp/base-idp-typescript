@@ -1,6 +1,6 @@
-import { SquareIdPClient } from "./client.js";
-import type { AuthorizeUrlOptions, SquareIdPConfig } from "./types.js";
-export type ReactSquareAuth = {
+import { BaseIdPClient } from "./client.js";
+import type { AuthorizeUrlOptions, BaseIdPConfig } from "./types.js";
+export type ReactBaseIdpAuth = {
     loginHref(options?: AuthorizeUrlOptions): string;
     login(options?: AuthorizeUrlOptions): void;
     buttonProps(options?: AuthorizeUrlOptions): {
@@ -8,5 +8,5 @@ export type ReactSquareAuth = {
         onClick(): void;
     };
 };
-export declare function createReactSquareAuth(config: SquareIdPConfig | SquareIdPClient): ReactSquareAuth;
+export declare function createReactBaseIdpAuth(config: BaseIdPConfig | BaseIdPClient): ReactBaseIdpAuth;
 //# sourceMappingURL=react.d.ts.map

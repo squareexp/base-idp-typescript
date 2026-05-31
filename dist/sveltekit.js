@@ -1,6 +1,6 @@
-import { SquareIdPServerClient } from "./server.js";
-export function createSvelteKitSquareAuth(config) {
-    const client = new SquareIdPServerClient(config);
+import { BaseIdPServerClient } from "./server.js";
+export function createSvelteKitBaseIdpAuth(config) {
+    const client = new BaseIdPServerClient(config);
     return {
         client,
         loginLocation(event, defaultReturnTo = "/") {
@@ -9,9 +9,8 @@ export function createSvelteKitSquareAuth(config) {
         },
         async callback(event, codeVerifier) {
             const code = event.url.searchParams.get("code");
-            if (!code) {
+            if (!code)
                 throw new Error("missing OAuth authorization code");
-            }
             const state = event.url.searchParams.get("state") ?? undefined;
             const tokens = await client.exchangeCode({ code, codeVerifier });
             const principal = await client.verifyAccessToken(tokens.access_token);

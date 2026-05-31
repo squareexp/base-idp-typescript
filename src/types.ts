@@ -1,17 +1,47 @@
 export type FetchLike = typeof fetch;
 
-export type SquareIdPConfig = {
+export type BaseIdPConfig = {
+  key: string;
   issuer: string;
-  clientId: string;
-  redirectUri: string;
-  scopes: string | string[];
-  audience?: string;
-  clientSecret?: string;
-  requiredScope?: string;
+  secret?: string;
   fetch?: FetchLike;
 };
 
-export type SquareIdentityMetadata = {
+export type ClientConfigResponse = {
+  client_id: string;
+  anon_key: string;
+  product: string;
+  display_name: string;
+  app_domain: string;
+  logo_url?: string;
+  issuer: string;
+  authorization_endpoint: string;
+  token_endpoint: string;
+  paseto_public_key_endpoint: string;
+  allowed_redirect_uris: string[];
+  allowed_scopes: string[];
+  allowed_auth_methods: string[];
+  requested_claims: string[];
+  confidential: boolean;
+  status: string;
+};
+
+export type ResolvedConfig = {
+  issuer: string;
+  clientId: string;
+  key: string;
+  redirectUri: string;
+  scopes: string[];
+  audience: string;
+  clientSecret?: string;
+  requiredScope?: string;
+  fetch: FetchLike;
+  confidential: boolean;
+  allowedScopes: string[];
+  allowedAuthMethods: string[];
+};
+
+export type BaseIdpIdentityMetadata = {
   issuer: string;
   authorization_endpoint: string;
   token_endpoint: string;
@@ -23,7 +53,7 @@ export type SquareIdentityMetadata = {
   token_endpoint_auth_methods_supported?: string[];
 };
 
-export type SquarePublicKey = {
+export type BaseIdpPublicKey = {
   kid: string;
   alg: "v4.public";
   kty: "OKP";
@@ -32,8 +62,8 @@ export type SquarePublicKey = {
   implicit_assertion?: string;
 };
 
-export type SquarePublicKeySet = {
-  keys: SquarePublicKey[];
+export type BaseIdpPublicKeySet = {
+  keys: BaseIdpPublicKey[];
 };
 
 export type AuthorizeUrlOptions = {
@@ -42,8 +72,10 @@ export type AuthorizeUrlOptions = {
   nonce?: string;
   scopes?: string | string[];
   redirectUri?: string;
+  authSessionId?: string;
   codeChallenge?: string;
   codeChallengeMethod?: "S256";
+  additionalParameters?: Record<string, string | undefined>;
 };
 
 export type TokenExchangeOptions = {
