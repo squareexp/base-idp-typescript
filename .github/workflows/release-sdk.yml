@@ -1,0 +1,47 @@
+name: Release Base IdP TypeScript SDK
+
+on:
+  push:
+    tags:
+      - 'sdk-v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and publish TypeScript SDK assets
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build package
+        run: npm run build
+
+      - name: Pack release artifact
+        run: |
+          set -euo pipefail
+          rm -rf release
+          mkdir -p release
+          npm pack --pack-destination release >/tmp/npm-pack.log
+          package_file="$(find release -maxdepth 1 -name '*.tgz' | sort | tail -n1)"
+          mv "$package_file" "release/base-idp-typescript-sdk-${GITHUB_REF_NAME}.tgz"
+
+      - name: Upload GitHub Release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: release/*.tgz
+          generate_release_notes: true
