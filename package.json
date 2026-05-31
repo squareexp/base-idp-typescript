@@ -1,16 +1,19 @@
 {
-  "name": "@squareexp/base-idp",
-  "version": "1.0.0",
+  "name": "base-idp",
+  "version": "1.0.1",
   "description": "Base IdP SDK for React, Next.js, SvelteKit, Vite, and server-side TypeScript.",
   "license": "UNLICENSED",
   "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
   "sideEffects": false,
   "files": [
     "dist",
     "README.md"
   ],
   "bin": {
-    "base-idp": "./dist/cli.js"
+    "base-idp": "dist/cli.js"
   },
   "exports": {
     ".": {
